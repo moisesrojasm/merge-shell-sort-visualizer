@@ -11,6 +11,23 @@ Este proyecto es una aplicación funcional desarrollada en Python (Tkinter) que 
 
 Este repositorio constituye el Entregable Final para la materia de Matemáticas Discretas e incluye un reporte técnico hecho en LaTeX bajo el estándar IEEE.
 
+## 📂 Estructura del Proyecto
+
+```plaintext
+merge-shell-sort-visualizer/
+│
+├── src/      
+│   ├── main.py                 # Interfaz de Tkinter
+│   ├── merge_sort.py 
+│   └── shell_sort.py
+│
+├── docs/                 
+│   ├── main.tex            
+│
+├── .gitignore                 
+└── README.md                   
+```
+
 ## 👥 Equipo de Desarrollo
 * [Nombre del Integrante 1] - [NUA]
 * [Nombre del Integrante 2] - [NUA]
