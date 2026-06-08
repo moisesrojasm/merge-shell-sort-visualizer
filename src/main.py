@@ -1,12 +1,4 @@
-from merge_sort import merge_sort
-import random
-
-def main():
-    rango = int(input("Cantidad de valores del arreglo: "))
-    linf = int(input("Límite inferior del arreglo: "))
-    lsup = int(input("Límite superior del arreglo: "))
-    arreglo = [random.randint(linf, lsup) for _ in range(rango)]
-    import tkinter as tk
+import tkinter as tk
 import random
 import time
 import threading
@@ -316,17 +308,3 @@ for color, texto in items:
 # ─── Arranque ─────────────────────────────────────────────────────────────────
 ventana.after(100, lambda: iniciar("aleatorio"))
 ventana.mainloop()
-
-    print(f"Arreglo original: {arreglo}")
-    
-    # 2. Definimos los índices de inicio y fin
-    indice_inicio = 0
-    indice_fin = len(arreglo) - 1
-    
-    merge_sort(arreglo, indice_inicio, indice_fin)
-    
-    print(f"Arreglo ordenado: {arreglo}")
-
-if __name__ == "__main__":
-    # Esto asegura que main() solo se ejecute si corremos este archivo directamente
-    main()
