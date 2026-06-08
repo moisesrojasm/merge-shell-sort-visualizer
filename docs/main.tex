@@ -1,0 +1,265 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage[utf8]{inputenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{listings}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{Implementación y Análisis Visual de Algoritmos de Ordenamiento: Merge Sort y Shell Sort\\
+\thanks{Reporte técnico para proyecto final de Matemáticas Discretas.}
+}
+
+% Autores agrupados para evitar empalmes en el PDF final
+\author{\IEEEauthorblockN{Emmanuel Jaime Jiménez, Alejandro León López, Dania Haniel Ortega Reyes,\\
+Luis Antonio Rincón García y Diego Moisés Rojas Mata}
+\IEEEauthorblockA{\textit{Licenciatura en Ingeniería de Datos e Inteligencia Artificial} \\
+\textit{Universidad de Guanajuato}\\
+Salamanca, Guanajuato, México \\
+\{e.jaimejimenez, a.leonlopez, dh.ortegareyes, la.rincon.garcia, dm.rojasmata\}@ugto.mx}
+}
+
+\maketitle
+
+\begin{abstract}
+En el presente trabajo se aborda el desarrollo de una aplicación gráfica orientada a la visualización en tiempo real de dos algoritmos fundamentales de ordenamiento: Merge Sort y Shell Sort. Mediante una implementación en Python utilizando la biblioteca Tkinter y el manejo de hilos de ejecución, se superó el reto de animar procesos recursivos sin bloquear la interfaz. Se evaluó el rendimiento, la complejidad temporal y espacial a través de contadores de comparaciones e intercambios. Los resultados demuestran la consistencia algorítmica de Merge Sort frente a la alta eficiencia espacial de Shell Sort con secuencias de Knuth.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Merge Sort, Shell Sort, Tkinter, Visualización de Algoritmos, Complejidad Temporal, Python.
+\end{IEEEkeywords}
+
+\section{Introducción}
+La comprensión profunda de los algoritmos de ordenamiento constituye un pilar fundamental en la formación en ciencias computacionales. Sin embargo, su análisis puramente teórico resulta insuficiente para capturar la dinámica real de su ejecución. En el presente trabajo se describe el diseño e implementación de una herramienta de visualización interactiva que permite observar en tiempo de ejecución el comportamiento de dos algoritmos de ordenamiento de relevancia histórica y técnica: Merge Sort y Shell Sort. A través de la representación gráfica de comparaciones, intercambios y profundidades de recursión, se busca tender un puente entre la notación asintótica formal y el comportamiento empírico observable \cite{cormen_algorithms}.
+
+\subsection{Shell Sort}
+Shell Sort fue publicado por primera vez por Donald L. Shell en 1959 en la revista \textit{Communications of the ACM} con el título "A High-Speed Sorting Procedure" \cite{shell1959}. Es un algoritmo de ordenamiento \textit{in-place} y de comparación que puede entenderse como una generalización del \textit{insertion sort} \cite{knuth1973}. Su idea principal consiste en ordenar pares de elementos distantes entre sí mediante un incremento (\textit{gap}) inicial grande, reducir progresivamente dicho incremento y, cuando este llega a 1, ejecutar un \textit{insertion sort} convencional. Esta estrategia permite mover elementos con gran desorden a su posición correcta con mayor rapidez que un intercambio de vecinos cercanos \cite{knuth1973}.
+
+\subsection{Merge Sort}
+Merge Sort fue desarrollado por John von Neumann en 1945 \cite{vonneumann1945} y es considerado uno de los primeros algoritmos de ordenamiento importantes de la historia, concebido originalmente para la EDVAC \cite{vonneumann1945}. El algoritmo sigue la técnica de divide y vencerás: si la lista contiene cero o un elemento, se considera ordenada; de lo contrario, se divide en dos sublistas de tamaño aproximadamente igual, las cuales se ordenan de forma recursiva y posteriormente se fusionan en una única lista ordenada \cite[pp.~158--168]{knuth1973}. Entre sus características principales destacan una complejidad temporal de $\mathcal{O}(n \log n)$ en todos los casos \cite{knuth1973}, la estabilidad del ordenamiento —es decir, la preservación del orden relativo de elementos iguales— y un requerimiento de $\mathcal{O}(n)$ de espacio auxiliar.
+
+
+\section{Metodología}
+
+\subsection{Descripción del Problema y Solución Propuesta}
+El desarrollo de visualizadores algorítmicos mediante interfaces gráficas de usuario (GUI) de un solo hilo, como \texttt{Tkinter}, presenta un problema inherente de concurrencia. La ejecución del bucle de eventos principal (\textit{mainloop}) se bloquea transitoriamente si se ejecutan de manera síncrona rutinas iterativas densas o llamadas recursivas continuas, lo que resulta en la pérdida de responsividad del sistema y la congelación de la pantalla (\textit{thread freezing}). 
+
+La solución arquitectónica implementada se basa en la separación estricta entre el cálculo algorítmico y el renderizado visual. Se implementó un patrón de diseño basado en la recolección de estados discretos. Los algoritmos de ordenamiento operan en memoria secundaria generando y almacenando tuplas inmutables (\textit{snapshots}) que contienen copias profundas del arreglo, mapeos de colores y métricas acumuladas cada vez que ocurre una operación de evaluación o escritura en la estructura de datos. Una vez concluido el cálculo lógico, el renderizado de la animación se delega a un hilo de ejecución independiente (\textit{Daemon Thread}), el cual lee secuencialmente la colección de estados, garantizando la fluidez de la interfaz gráfica y permitiendo el control asíncrono del flujo (pausa, reanudación y saltos discretos).
+
+\subsection{Explicación de la Implementación}
+La arquitectura del sistema se divide lógicamente en la declaración de variables de estado globales, el gestor de renderizado, las funciones de ordenamiento y los controladores de subprocesos.
+
+\subsubsection{Declaración de Variables de Estado y Configuración}
+El estado del programa y de la interfaz gráfica está determinado por las siguientes variables globales definidas a nivel de módulo:
+
+\begin{itemize}
+    \item \textbf{Constantes Hexadecimales:} 
+    \texttt{COLOR\_BASE} (azul, elemento no procesado), \texttt{COLOR\_COMPARE} (rojo, evaluación condicional), \texttt{COLOR\_MERGE} (magenta, reubicación de memoria) y \texttt{COLOR\_DONE} (azul claro, posición final confirmada).
+    \item \textbf{\texttt{COLOR\_NIVEL}:} Un arreglo de cinco cadenas hexadecimales que actúan como gradiente visual para representar la profundidad en el árbol de recursión (\textit{Merge Sort}) o el tamaño del salto iterativo (\textit{Shell Sort}).
+    \item \textbf{Instancias de \texttt{Tkinter}:} \texttt{ventana} (raíz de la interfaz) y \texttt{canvas} (lienzo de dibujo vectorial).
+    \item \textbf{\texttt{arreglo\_actual}:} Lista que almacena los valores numéricos brutos generados (datos de entrada).
+    \item \textbf{\texttt{pasos}:} Lista bidimensional maestra que almacena las tuplas (estado del arreglo, estado de colores, contador de comparaciones, contador de intercambios, métrica extra).
+    \item \textbf{\texttt{paso\_idx}:} Variable entera que actúa como puntero al índice del arreglo \texttt{pasos} que se está proyectando en la pantalla actual.
+    \item \textbf{\texttt{reproduciendo}:} Bandera booleana (\texttt{True/False}) que controla la condición de paro o ejecución del hilo secundario de animación.
+    \item \textbf{Variables de Control (\texttt{Tkinter Variables}):}
+    \begin{itemize}
+        \item \texttt{algoritmo}: Instancia de \texttt{tk.StringVar} que almacena la selección del usuario ("merge" o "shell").
+        \item \texttt{var\_tamano}: Instancia de \texttt{tk.IntVar} vinculada al control deslizante (\textit{slider}) del tamaño del arreglo ($n$).
+        \item \texttt{var\_velocidad}: Instancia de \texttt{tk.IntVar} vinculada al control deslizante del retardo de la animación.
+        \item \texttt{var\_comparaciones} y \texttt{var\_intercambios}: Instancias de \texttt{tk.StringVar} utilizadas para renderizar dinámicamente el conteo de operaciones.
+        \item \texttt{var\_info\_extra}: Instancia de \texttt{tk.StringVar} que muestra el tamaño del \textit{gap} actual, exclusivo de la ejecución de Shell Sort.
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{Gestores de Renderizado Visual}
+\vspace{0.2cm}
+\noindent \textbf{\texttt{dibujar(arr, colores)}}
+\begin{itemize}
+    \item \textit{Propósito:} Renderizar geométricamente un estado específico del arreglo en el \texttt{Canvas}.
+    \item \textit{Funcionamiento:} Primero limpia completamente la memoria gráfica (\texttt{canvas.delete("all")}). Calcula el ancho de cada barra ($b_w$) dividiendo la resolución horizontal del lienzo entre la longitud del arreglo. Determina la altura de cada barra calculando una razón lineal entre el valor del elemento y el valor máximo de la colección, multiplicada por la altura total del lienzo. Finalmente, traza los polígonos utilizando el método \texttt{create\_rectangle}.
+\end{itemize}
+
+\vspace{0.2cm}
+\noindent \textbf{\texttt{aplicar\_paso(idx)}}
+\begin{itemize}
+    \item \textit{Propósito:} Coordinar la actualización del estado visual y las métricas de la interfaz de usuario.
+    \item \textit{Funcionamiento:} Verifica los límites del puntero numérico \texttt{idx}. Desempaqueta la tupla contenida en \texttt{pasos[idx]}, transfiere la copia del arreglo y la lista de colores a la función \texttt{dibujar()}, y actualiza los valores de texto de las etiquetas mediante el método \texttt{.set()} de las variables \texttt{var\_comparaciones}, \texttt{var\_intercambios} y \texttt{var\_info\_extra}.
+\end{itemize}
+
+\subsubsection{Lógica de Algoritmos (Generadores de Estado)}
+\vspace{0.2cm}
+\noindent \textbf{\texttt{construir\_merge(arr\_entrada)}}
+\begin{itemize}
+    \item \textit{Propósito:} Generar la estructura de datos que documenta la ejecución de \textit{Merge Sort}.
+    \item \textit{Funcionamiento:} Implementa un paradigma de recursión pura mediante la subrutina interna \texttt{ms(l, r, depth)}. Manipula los índices espaciales \texttt{l} y \texttt{r} sobre una copia del arreglo maestro. La profundidad recursiva altera la indexación de los tonos visuales almacenados en \texttt{COLOR\_NIVEL}. Utiliza una función de clausura estática llamada \texttt{snap()}, la cual empaqueta en una tupla las copias dinámicas del arreglo, el mapa de colores y los contadores en memoria, para finalmente anexarlas a una lista local que se retorna en bloque al finalizar la ejecución.
+\end{itemize}
+
+\vspace{0.2cm}
+\noindent \textbf{\texttt{construir\_shell(arr\_entrada)}}
+\begin{itemize}
+    \item \textit{Propósito:} Generar la estructura de datos que documenta la ejecución de \textit{Shell Sort}.
+    \item \textit{Funcionamiento:} Calcula vectorialmente la secuencia de \textit{gaps} decrecientes propuesta por Knuth. Posteriormente, ejecuta la subrutina de ordenamiento por inserción iterando sobre cada partición basada en el \textit{gap} en curso. Modifica condicionalmente los índices cromáticos para resaltar la región evaluada y, del mismo modo que el algoritmo anterior, inyecta llamadas constantes a \texttt{snap(gap)} para documentar cada iteración y asignación de memoria.
+\end{itemize}
+
+\subsubsection{Gestión de Concurrencia y Eventos de Usuario}
+\vspace{0.2cm}
+\noindent \textbf{\texttt{iniciar(tipo="aleatorio")}}
+\begin{itemize}
+    \item \textit{Propósito:} Inicializar y reiniciar el entorno de evaluación gráfica.
+    \item \textit{Funcionamiento:} Llama a \texttt{detener()} para abatir hilos activos. Evalúa el parámetro \texttt{tipo} para poblar la lista \texttt{arreglo\_actual} mediante compresión de listas con enteros pseudoaleatorios, escalonados u ordenados inversamente. Deriva el flujo de control hacia la función constructora correspondiente (Merge o Shell) evaluando el objeto \texttt{algoritmo.get()}. Restablece el puntero \texttt{paso\_idx} a cero y manda a proyectar el estado estático inicial.
+\end{itemize}
+
+\vspace{0.2cm}
+\noindent \textbf{\texttt{toggle\_play()}}
+\begin{itemize}
+    \item \textit{Propósito:} Conmutar el ciclo de reproducción asíncrona de los estados del algoritmo.
+    \item \textit{Funcionamiento:} Evalúa la variable booleana \texttt{reproduciendo}. Si es verdadera, invoca \texttt{detener()}. Si es falsa, invierte la variable, desactiva el botón de avance manual, y ejecuta la instanciación de la clase \texttt{threading.Thread}, pasándole como objetivo la función \texttt{loop\_reproduccion} y activando la bandera \texttt{daemon=True} para asegurar la finalización del hilo en caso de cierre de la ventana.
+\end{itemize}
+
+\vspace{0.2cm}
+\noindent \textbf{\texttt{loop\_reproduccion()}}
+\begin{itemize}
+    \item \textit{Propósito:} Bucle de iteración para la proyección cronológica en segundo plano.
+    \item \textit{Funcionamiento:} Implementa un ciclo \texttt{while} que depende lógicamente de la bandera \texttt{reproduciendo} y el límite del arreglo \texttt{pasos}. Incrementa secuencialmente \texttt{paso\_idx}, lo envía a \texttt{aplicar\_paso(idx)} e invoca al método de bloqueo \texttt{time.sleep()}, cuya latencia se recalcula en cada iteración mediante la función de decaimiento temporal \texttt{obtener\_delay()}.
+\end{itemize}
+
+\vspace{0.2cm}
+\noindent \textbf{\texttt{obtener\_delay()}}
+\begin{itemize}
+    \item \textit{Propósito:} Calcular algorítmicamente la latencia de hilo en milisegundos.
+    \item \textit{Funcionamiento:} Recupera el valor del uno al diez desde la interfaz (\texttt{var\_velocidad.get()}) y le aplica la función $t = \max(10, 600 / (v^2 \cdot 0.4 + 0.6))$, garantizando una aceleración no lineal requerida para los tiempos de visualización asintóticos, devolviendo dicho escalar flotante.
+\end{itemize}
+
+\vspace{0.2cm}
+\noindent \textbf{\texttt{detener()}}, \textbf{\texttt{paso\_adelante()}} y \textbf{\texttt{actualizar\_botones()}}
+\begin{itemize}
+    \item \textit{Propósito:} Funciones utilitarias para la alteración de estados de control.
+    \item \textit{Funcionamiento:} \texttt{detener()} conmuta \texttt{reproduciendo} a falso y restaura la configuration semántica del botón \texttt{btn\_play}. \texttt{paso\_adelante()} realiza un incremento aritmético acotado de \texttt{paso\_idx} (+1) e invoca al renderizador de un fotograma unitario. Finalmente, \texttt{actualizar\_botones()} muta las propiedades \texttt{state} ("disabled" o "normal") de los elementos interactivos evaluando de forma booleana la posición del índice relativa a la longitud del arreglo.
+\end{itemize}
+
+\section{Resultados}
+
+\subsection{Análisis de Complejidad Temporal}
+Al analizar el comportamiento del código, se comprobaron las complejidades matemáticas que se resumen en la Tabla \ref{tab:complejidad}. 
+
+Para el caso de Merge Sort, al dividir el arreglo a la mitad en cada paso recursivo, el proceso se repite sucesivamente en $\log_2 n$ niveles de división. Como en cada uno de estos niveles se tienen que recorrer los $n$ elementos para volver a juntarlos de forma ordenada, su tiempo de ejecución siempre es $\mathcal{O}(n \log n)$, sin importar si los números ingresan totalmente desordenados, invertidos o ya acomodados. Sin embargo, su principal desventaja es que necesita una memoria extra de $\mathcal{O}(n)$. Esto ocurre porque el algoritmo no puede ordenar todo ahí mismo; el código requiere crear listas como apoyo en cada llamada para guardar los datos mientras se fusionan.
+
+\begin{table}[htbp]
+\caption{Análisis de Complejidad Espacial y Temporal}
+\begin{center}
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Algoritmo} & \textbf{Caso Promedio} & \textbf{Peor Caso} & \textbf{Espacial} \\
+\hline
+Merge Sort & $\mathcal{O}(n \log n)$ & $\mathcal{O}(n \log n)$ & $\mathcal{O}(n)$ \\
+\hline
+Shell Sort & $\mathcal{O}(n^{1.5})$ & $\mathcal{O}(n^2)$ & $\mathcal{O}(1)$ \\
+\hline
+\end{tabular}
+\label{tab:complejidad}
+\end{center}
+\end{table}
+
+Por su parte, el Shell Sort resulta ser mucho más eficiente en cuanto al uso de memoria. Como los números se reacomodan directamente dentro del mismo arreglo usando solamente una variable sencilla para realizar los intercambios, no se gasta memoria RAM extra, por lo que su complejidad espacial es $\mathcal{O}(1)$. En cuanto a su velocidad, usar la secuencia de saltos de Knuth ayuda a evitar que el programa caiga en el peor de los casos. En la práctica, esto logra que en promedio el tiempo de ejecución ronde el $\mathcal{O}(n^{1.5})$, lo cual es una mejora enorme comparado con el tiempo $\mathcal{O}(n^2)$ de un ordenamiento clásico. Esto se debe a que los saltos grandes permiten que los números pequeños viajen rápidamente al inicio del arreglo, sin tener que moverse de un lugar a otro casilla por casilla.
+
+\section{Análisis y Discusión}
+Al analizar los contadores de comparaciones e intercambios en el programa, se encontraron diferencias importantes entre el comportamiento de los dos algoritmos. Aunque Merge Sort mantiene un tiempo de ejecución muy estable, presenta un riesgo claro cuando se intenta ordenar una cantidad masiva de datos. Como el algoritmo funciona mediante recursión, cada vez que se divide el arreglo se hace una nueva llamada a la función, la cual se acumula en la memoria del sistema. Si el arreglo inicial es demasiado grande, se puede superar el límite permitido por el intérprete de Python, haciendo que el programa colapse con un error de desbordamiento (\textit{RecursionError} o \textit{Stack Overflow}). Este es un límite de software real que se debe considerar al programar, más allá de lo que dice la teoría matemática.
+
+Por otro lado, la implementación de Shell Sort evita este problema por completo al usar solamente ciclos iterativos anidados en lugar de funciones recursivas. Al observar la interfaz gráfica durante la ejecución, se hizo evidente que los saltos amplios (\textit{gaps}) del inicio son fundamentales, ya que logran mover los valores más grandes y más pequeños a sus respectivos extremos en muy pocos pasos. Este acomodo previo deja el arreglo prácticamente ordenado para cuando el salto finalmente se reduce a 1. Como resultado, la última pasada del algoritmo requiere una cantidad mínima de movimientos para terminar el trabajo, lo que confirma que la secuencia de saltos es una optimización excelente en la práctica para ahorrar procesamiento.
+
+\section{Capturas de Pantalla de la Implementación}
+
+\subsection{Visualización de Merge Sort}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.45\textwidth]{1.jpeg}}
+\caption{Profundidad máxima del árbol de recursión en \textit{Merge Sort}: primeros elementos aislados listos para evaluación (color naranja, nivel 3+).}
+\label{fig:merge1}
+\end{figure}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.45\textwidth]{2.jpeg}}
+\caption{Fase inicial de mezcla (\textit{Merge}). Reubicación en memoria del primer par de elementos base (color magenta).}
+\label{fig:merge2}
+\end{figure}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.45\textwidth]{3.jpeg}}
+\caption{Consolidación del primer sub-arreglo lógico (color celeste, estado ordenado) y transición de recursión al par adyacente.}
+\label{fig:merge3}
+\end{figure}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.45\textwidth]{4.jpeg}}
+\caption{Fusión intermedia asimétrica: la mitad izquierda del arreglo se encuentra resuelta mientras inicia la ordenación del bloque derecho.}
+\label{fig:merge4}
+\end{figure}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.45\textwidth]{5.jpeg}}
+\caption{Ejecución de la subrutina final unificando las dos mitades mayores del arreglo bajo el estado de fusión.}
+\label{fig:merge5}
+\end{figure}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.45\textwidth]{6.jpeg}}
+\caption{Estado terminal de \textit{Merge Sort}. Arreglo convergido en su totalidad registrando 61 comparaciones empíricas.}
+\label{fig:merge6}
+\end{figure}
+
+\subsection{Visualización de Shell Sort}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.45\textwidth]{7.jpeg}}
+\caption{Fase inicial de \textit{Shell Sort}. Aplicación del salto máximo ($Gap = 13$) evaluando elementos en los extremos de la muestra (barras rojas).}
+\label{fig:shell1}
+\end{figure}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.45\textwidth]{8.jpeg}}
+\caption{Intercambio de elementos bajo el \textit{gap} de 13. Se observan los sub-arreglos lógicos entrelazados mediante mapeo de colores.}
+\label{fig:shell2}
+\end{figure}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.45\textwidth]{9.jpeg}}
+\caption{Reducción dinámica del incremento a $Gap = 4$ según la sucesión de Knuth, aumentando la resolución de la evaluación local.}
+\label{fig:shell3}
+\end{figure}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.45\textwidth]{10.jpeg}}
+\caption{Transición terminal del algoritmo iterando con $Gap = 1$, operando lógicamente como un método de inserción sobre elementos adyacentes.}
+\label{fig:shell4}
+\end{figure}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.45\textwidth]{11.jpeg}}
+\caption{Estado terminal de \textit{Shell Sort}. Finalización de la reubicación espacial de forma in-place.}
+\label{fig:shell5}
+\end{figure}
+
+\section{Conclusiones y Aprendizajes Obtenidos}
+A través del desarrollo de este proyecto, se logró la implementación exitosa de dos algoritmos de ordenamiento fundamentales, integrando tanto su lógica matemática como su representación visual. Se concluye que, si bien la recursión en Merge Sort ofrece una estructura elegante y predecible en términos de rendimiento con una complejidad $\mathcal{O}(n \log n)$, la implementación iterativa de Shell Sort representa una solución más robusta para entornos con restricciones de memoria, gracias a su complejidad espacial constante $\mathcal{O}(1)$.
+
+El reto técnico más grande fue evitar que la interfaz se congelara mientras el algoritmo trabajaba. Al principio, la ventana se bloqueaba durante los cálculos, pero esto se resolvió usando hilos separados para que el proceso de dibujo no interrumpiera la lógica del ordenamiento. Además, durante la depuración del código, se aprendió que documentar y usar nombres claros para las variables es fundamental; organizar el sistema en módulos pequeños hizo que fuera mucho más fácil encontrar y arreglar errores. Al final, este trabajo demostró que ver en pantalla cómo se comportan los algoritmos ayuda a entender conceptos que antes solo se veían como fórmulas abstractas en papel.
+
+\begin{thebibliography}{00}
+\bibitem{cormen_algorithms} T. H. Cormen, C. E. Leiserson, R. L. Rivest, and C. Stein, \textit{Introduction to Algorithms}, 3rd ed. Cambridge, MA, USA: MIT Press, 2009, pp. 170--179.
+\bibitem{knuth1973} D.~E. Knuth, \emph{The Art of Computer Programming, Volume~3: Sorting and Searching}, 2nd~ed. Reading, MA, USA: Addison-Wesley, 1998, pp. 83--95.
+\bibitem{shell1959} D.~L. Shell, ``A high-speed sorting procedure,'' \emph{Commun. ACM}, vol.~2, no.~7, pp. 30--32, jul. 1959.
+\bibitem{vonneumann1945} J. von Neumann, ``First draft of a report on the EDVAC,'' Moore School of Electrical Engineering, Univ. of Pennsylvania, Philadelphia, PA, USA, Tech. Rep., 1945.
+\end{thebibliography}
+
+\end{document}
