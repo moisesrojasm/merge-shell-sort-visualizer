@@ -17,16 +17,10 @@ merge-shell-sort-visualizer/
 │   ├── merge_sort.py 
 │   └── shell_sort.py
 │
-├── docs/                 
+├── docs/       
+│   ├── Reporte_Final.pdf          
 │   └── main.tex            
 │
 ├── .gitignore                 
 └── README.md                   
 ```
-
-## Equipo de Desarrollo
-* [Nombre del Integrante 1] - [NUA]
-* [Nombre del Integrante 2] - [NUA]
-* [Nombre del Integrante 3] - [NUA]
-* [Nombre del Integrante 4] - [NUA]
-* [Nombre del Integrante 5] - [NUA]
